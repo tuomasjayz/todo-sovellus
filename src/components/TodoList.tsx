@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TodoItem, Priority, Category, Statistics } from '@/types'
+import { supabase } from '@/lib/supabase'
 import TodoStats from './TodoStats'
 import TodoFilters from './TodoFilters'
 
@@ -16,40 +17,112 @@ export default function TodoList() {
     priority?: Priority
     showCompleted: boolean
   }>({ showCompleted: true })
+  const [loading, setLoading] = useState(true)
 
-  const addTodo = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchTodos()
+  }, [])
+
+  async function fetchTodos() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setTodos(data || [])
+    } catch (error) {
+      console.error('Error fetching todos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addTodo = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTodo.trim()) return
 
-    const todo: TodoItem = {
-      id: Date.now(),
-      text: newTodo,
-      completed: false,
-      priority: selectedPriority,
-      category: selectedCategory,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      createdAt: new Date()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('User not found')
+        return
+      }
+
+      const newTodoItem = {
+        text: newTodo,
+        completed: false,
+        priority: selectedPriority,
+        category: selectedCategory,
+        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        created_at: new Date().toISOString(),
+        user_id: user.id
+      }
+
+      const { data, error } = await supabase
+        .from('todos')
+        .insert([newTodoItem])
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      if (data) {
+        setTodos([data[0], ...todos])
+        setNewTodo('')
+      }
+    } catch (error: any) {
+      console.error('Error adding todo:', error.message || error)
     }
-
-    setTodos([...todos, todo])
-    setNewTodo('')
   }
 
-  const toggleTodo = (id: number) => {
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
+  const toggleTodo = async (id: number) => {
+    try {
+      const todoToUpdate = todos.find(t => t.id === id)
+      if (!todoToUpdate) return
+
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed: !todoToUpdate.completed })
+        .eq('id', id)
+
+      if (error) throw error
+      setTodos(todos.map(todo =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      ))
+    } catch (error) {
+      console.error('Error updating todo:', error)
+    }
   }
 
-  const deleteTodo = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id))
+  const deleteTodo = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      setTodos(todos.filter(todo => todo.id !== id))
+    } catch (error) {
+      console.error('Error deleting todo:', error)
+    }
   }
 
   const calculateStats = (): Statistics => {
     const stats: Statistics = {
       total: todos.length,
       completed: todos.filter(t => t.completed).length,
-      overdue: todos.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && !t.completed).length,
+      overdue: todos.filter(t => 
+        t.due_date && new Date(t.due_date) < new Date() && !t.completed
+      ).length,
       byCategory: {
         työ: 0,
         henkilökohtainen: 0,
@@ -156,8 +229,8 @@ export default function TodoList() {
                   {todo.priority}
                 </span>
                 <span>{todo.category}</span>
-                {todo.dueDate && (
-                  <span>Deadline: {new Date(todo.dueDate).toLocaleDateString()}</span>
+                {todo.due_date && (
+                  <span>Deadline: {new Date(todo.due_date).toLocaleDateString('fi-FI')}</span>
                 )}
               </div>
             </div>
