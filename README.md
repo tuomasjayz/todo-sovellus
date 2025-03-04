@@ -24,6 +24,7 @@ Moderni tehtävienhallintasovellus, joka auttaa sinua pysymään organisoituna j
 - **Hosting**: Netlify, sovelllukseen pääsee osoitteessa: todosovellus.netlify.app
 
 ## Käyttöönotto
+Huom! Käyttö kehitystilassa tarvitsee tarvittavat .env asetukset. Niitä ei ole viety githubiin vaan ohjelma toimii osoitteessa todosovellus.netlify.app.
 
 1. Kloonaa repositorio
 2. Asenna riippuvuudet: `npm install`
