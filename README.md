@@ -21,7 +21,7 @@ Moderni tehtävienhallintasovellus, joka auttaa sinua pysymään organisoituna j
 - **Tietokanta**: Supabase (PostgreSQL)
 - **Autentikaatio**: Supabase Auth
 - **Ilmoitukset**: React Hot Toast
-- **Hosting**: Netlify
+- **Hosting**: Netlify, sovelllukseen pääsee osoitteessa: todosovellus.netlify.app
 
 ## Käyttöönotto
 
@@ -29,7 +29,7 @@ Moderni tehtävienhallintasovellus, joka auttaa sinua pysymään organisoituna j
 2. Asenna riippuvuudet: `npm install`
 3. Kopioi `.env.example` tiedosto nimellä `.env` ja täytä Supabase-tunnukset
 4. Käynnistä kehityspalvelin: `npm run dev`
-5. Avaa [http://localhost:3000](http://localhost:3000) selaimessasi
+5. Avaa [http://localhost:3000] tai todosovellus.netlify.app (hosting-versio) selaimessasi
 
 ## Kirjautuminen
 
