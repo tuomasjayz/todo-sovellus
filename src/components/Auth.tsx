@@ -36,8 +36,8 @@ export default function Auth() {
         })
         if (error) throw error
       }
-    } catch (error: any) {
-      alert(error.message)
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      console.error('Error during authentication:', error.message || error);
     } finally {
       setLoading(false)
       setEmail('')

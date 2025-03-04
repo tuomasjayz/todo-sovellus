@@ -13,6 +13,7 @@ export default function TodoStats({ stats }: TodoStatsProps) {
           <p>Tehtäviä yhteensä: {stats.total}</p>
           <p>Valmiina: {stats.completed}</p>
           <p>Myöhässä: {stats.overdue}</p>
+          <p>Tärkeitä: {stats.important}</p>
         </div>
       </div>
 

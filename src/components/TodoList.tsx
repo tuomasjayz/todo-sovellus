@@ -18,8 +18,12 @@ export default function TodoList() {
     category?: Category
     priority?: Priority
     showCompleted: boolean
-  }>({ showCompleted: true })
+    onlyImportant: boolean
+  }>({ showCompleted: true, onlyImportant: false })
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true)
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null)
   const [sortOption, setSortOption] = useState<SortOption>('created_at')
@@ -86,8 +90,9 @@ export default function TodoList() {
         setDueDate('')
         toast.success('Tehtävä lisätty')
       }
-    } catch (error: any) {
-      console.error('Error adding todo:', error.message || error)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error adding todo:', errorMessage)
     }
   }
 
@@ -131,17 +136,74 @@ export default function TodoList() {
     }
   }
 
-  const deleteTodo = async (id: number) => {
+  const toggleImportant = async (id: number) => {
     try {
+      const todoToUpdate = todos.find(t => t.id === id)
+      if (!todoToUpdate) {
+        toast.error('Tehtävää ei löytynyt')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('todos')
+        .update({ 
+          important: !todoToUpdate.important,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Supabase error details:', error)
+        toast.error(`Virhe: ${error.message || 'Tuntematon virhe'}`)
+        return
+      }
+
+      if (!data) {
+        toast.error('Päivitys epäonnistui')
+        return
+      }
+
+      setTodos(todos.map(todo =>
+        todo.id === id ? { ...todo, ...data } : todo
+      ))
+      
+      toast.success(todoToUpdate.important ? 'Poistettu tärkeistä tehtävistä' : 'Merkitty tärkeäksi tehtäväksi')
+    } catch (error) {
+      console.error('Error updating todo:', error)
+      toast.error('Odottamaton virhe tehtävän päivityksessä')
+    }
+  }
+
+  const deleteTodo = async (id: number) => {
+    // Ask for confirmation before deleting
+    if (!window.confirm('Haluatko varmasti poistaa tämän tehtävän?')) {
+      return
+    }
+    
+    try {
+      const todoToDelete = todos.find(t => t.id === id)
+      if (!todoToDelete) {
+        toast.error('Tehtävää ei löytynyt')
+        return
+      }
+
       const { error } = await supabase
         .from('todos')
         .delete()
         .eq('id', id)
 
-      if (error) throw error
+      if (error) {
+        toast.error('Virhe tehtävän poistamisessa')
+        throw error
+      }
+      
       setTodos(todos.filter(todo => todo.id !== id))
+      toast.success('Tehtävä poistettu')
     } catch (error) {
       console.error('Error deleting todo:', error)
+      toast.error('Odottamaton virhe tehtävän poistamisessa')
     }
   }
 
@@ -152,6 +214,7 @@ export default function TodoList() {
       overdue: todos.filter(t => 
         t.due_date && new Date(t.due_date) < new Date() && !t.completed
       ).length,
+      important: todos.filter(t => t.important).length,
       byCategory: {
         työ: 0,
         henkilökohtainen: 0,
@@ -173,6 +236,7 @@ export default function TodoList() {
     return stats
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEdit = async (todo: TodoItem) => {
     if (!editingTodo) return
     
@@ -227,8 +291,9 @@ export default function TodoList() {
       const matchesCategory = !filter.category || todo.category === filter.category
       const matchesPriority = !filter.priority || todo.priority === filter.priority
       const matchesCompleted = filter.showCompleted || !todo.completed
+      const matchesImportant = !filter.onlyImportant || todo.important
       
-      return matchesSearch && matchesCategory && matchesPriority && matchesCompleted
+      return matchesSearch && matchesCategory && matchesPriority && matchesCompleted && matchesImportant
     })
   )
 
@@ -323,9 +388,14 @@ export default function TodoList() {
               className="w-5 h-5"
             />
             <div className="flex-1">
-              <span className={todo.completed ? 'line-through text-gray-500' : ''}>
-                {todo.text}
-              </span>
+              <div className="flex items-center">
+                <span className={todo.completed ? 'line-through text-gray-500' : ''}>
+                  {todo.text}
+                </span>
+                {todo.important && (
+                  <span className="ml-2 text-yellow-500">★</span>
+                )}
+              </div>
               <div className="flex gap-2 text-sm text-gray-400">
                 <span className={`px-2 py-0.5 rounded ${
                   getPriorityColor(todo.priority)
@@ -343,6 +413,13 @@ export default function TodoList() {
                 )}
               </div>
             </div>
+            <button
+              onClick={() => toggleImportant(todo.id)}
+              className="p-1 text-yellow-500 hover:text-yellow-400 mr-2"
+              title={todo.important ? "Poista tärkeä merkintä" : "Merkitse tärkeäksi"}
+            >
+              {todo.important ? '★' : '☆'}
+            </button>
             <button
               onClick={() => deleteTodo(todo.id)}
               className="p-1 text-red-500 hover:text-red-400"

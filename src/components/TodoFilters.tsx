@@ -5,11 +5,13 @@ interface TodoFiltersProps {
     category?: Category
     priority?: Priority
     showCompleted: boolean
+    onlyImportant: boolean
   }
   setFilter: React.Dispatch<React.SetStateAction<{
     category?: Category
     priority?: Priority
     showCompleted: boolean
+    onlyImportant: boolean
   }>>
 }
 
@@ -56,6 +58,19 @@ export default function TodoFilters({ filter, setFilter }: TodoFiltersProps) {
           className="w-5 h-5"
         />
         Näytä valmiit
+      </label>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={filter.onlyImportant}
+          onChange={(e) => setFilter(prev => ({
+            ...prev,
+            onlyImportant: e.target.checked
+          }))}
+          className="w-5 h-5"
+        />
+        Vain tärkeät
       </label>
     </div>
   )
